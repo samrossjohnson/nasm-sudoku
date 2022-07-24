@@ -1,2 +1,2 @@
-# nasm-text-editor
-Terminal based text editor written in NASM.
+# nasm-sudoku
+Terminal based sudoku game written in NASM.
