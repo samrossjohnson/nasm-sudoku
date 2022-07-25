@@ -11,9 +11,10 @@
 %define     fd_stdin  0
 
             global    _start
-            
+
             section   .text
-_start:     mov       rax, sys_read           ; system call for read
+_start:
+            mov       rax, sys_read           ; system call for read
             mov       rdi, fd_stdin           ; file handle 0 is stdin
             mov       rsi, buffer             ; address of buffer
             mov       rdx, 1                  ; number of bytes to read
@@ -23,7 +24,8 @@ _start:     mov       rax, sys_read           ; system call for read
             je        exit                    ; exit
             jmp       _start                  ; continue loop
 
-exit:       mov       rdi, 0                  ; store read exit code
+exit:
+            mov       rdi, 0                  ; store read exit code
             mov       rax, sys_exit           ; system call for exit
             syscall                           ; invoke operating system to exit
 
