@@ -23,10 +23,10 @@ _start:
             call      init_term
             mov       rax, sys_read           ; system call for read
             mov       rdi, fd_stdin           ; file handle 0 is stdin
-            mov       rsi, buffer             ; address of buffer
+            mov       rsi, input              ; address of buffer
             mov       rdx, 1                  ; number of bytes to read
             syscall                           ; invoke OS to do the read
-            movzx     rdi, byte [buffer]      ; the byte that was read
+            movzx     rdi, byte [input]       ; the byte that was read
             cmp       rdi, keycode_Q          ; compare entered key with quit symbol
             je        exit                    ; exit
             jmp       _start                  ; continue loop
@@ -72,7 +72,7 @@ reset_term:
             ret
 
             section   .bss
-buffer:     resb      1
+input:      resb      1                       ; buffer used to read input
 termios:
 c_iflag     resd      1                       ; input mode flags
 c_oflag     resd      1                       ; output mode flags
