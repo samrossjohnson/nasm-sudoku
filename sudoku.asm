@@ -6,21 +6,28 @@
 %define     keycode_Q 81
 
 %define     sys_read  0
+%define     sys_write 1
 %define     sys_ioctl 16
 %define     sys_exit  60
 
 %define     fd_stdin  0
+%define     fd_stdout 1
 
 %define     tcgets    0x5401
 %define     tcsets    0x5402
 %define     icanon    1<<1
 %define     echo      1<<3
 
+%define     row_chars 38                      ; number of characters in a row including decorations
+%define     num_rows  9                       ; number of rows in the sudoku grid
+%define     num_cols  9                       ; number of columns in the sudoku grid
+
             global    _start
 
             section   .text
 _start:
             call      init_term
+            call      draw_grid
             mov       rax, sys_read           ; system call for read
             mov       rdi, fd_stdin           ; file handle 0 is stdin
             mov       rsi, input              ; address of buffer
@@ -71,8 +78,63 @@ reset_term:
             syscall                           ; invoke the OS to write termios
             ret
 
+; ==== DRAW GRID FUNCTION ====
+; function to draw the sudoku grid to stdout
+draw_grid:
+            mov       r8, 0                   ; number of rows draw so far
+draw_loop:
+            call      draw_row_split          ; draw decorative row split
+            call      draw_row_content        ; draw content for row
+            inc       r8                      ; row finished, increase counter
+            cmp       r8, num_rows            ; compare for row limit
+            jl        draw_loop               ; loop if not at limit
+            call      draw_row_split          ; closing decorative row split
+            ret                               ; end function
+; ==== END DRAW GRID FUNCTION ====
+
+; ==== DRAW ROW SPLIT FUNCTION ====
+; function to decorative line between rows for the sudoku grid
+draw_row_split:
+            mov       rax, sys_write          ; code for write syscall
+            mov       rdi, fd_stdout          ; write to stdout (terminal)
+            mov       rsi, row_split          ; buffer to write out
+            mov       rdx, row_chars          ; number of bytes to write
+            syscall                           ; invoke OS to write
+            ret                               ; end function
+; ==== END DRAW ROW CONTENT FUNCTION ====
+
+; ==== DRAW ROW CONTENT FUNCTION ====
+; function to draw all columns of a row in the sudoku grid.   
+draw_row_content:
+            mov       r9, 0                   ; number of columns drawn so far
+            mov       rdx, write              ; put start of write buffer into rdx
+content_loop:
+            mov       byte [rdx], '|'         ; decorative character
+            inc       rdx                     ; next byte
+            mov       byte [rdx], ' '         ; spacing
+            inc       rdx                     ; next byte
+            mov       byte [rdx], '0'         ; the ascii grid value
+            inc       rdx                     ; next byte
+            mov       byte [rdx], ' '         ; spacing
+            inc       rdx                     ; next byte
+            inc       r9                      ; row finished, increase counter
+            cmp       r9, num_cols            ; compare for column limit
+            jl        content_loop            ; loop if not at limit
+            mov       byte [rdx], '|'         ; closing decorative character
+            inc       rdx                     ; next byte
+            mov       byte [rdx], 10          ; new line
+            mov       rax, sys_write          ; code for write syscall
+            mov       rdi, fd_stdout          ; write to stdout (terminal)
+            mov       rsi, write              ; buffer to write out
+            mov       rdx, row_chars          ; write whole row
+            syscall                           ; invoke OS to write
+            ret                               ; end function
+; ==== END DRAW ROW CONTENT FUNCTION ====
+
             section   .bss
 input:      resb      1                       ; buffer used to read input
+sudoku:     resb      81
+write:      resb      38
 termios:
 c_iflag     resd      1                       ; input mode flags
 c_oflag     resd      1                       ; output mode flags
@@ -80,3 +142,6 @@ c_cflag     resd      1                       ; control mode flags
 c_lflag     resd      1                       ; local mode flags
 c_line      resb      1                       ; line discipline
 c_cc        resb      19                      ; control characters
+
+            section   .data
+row_split:  db        "+---+---+---+---+---+---+---+---+---+", 10
