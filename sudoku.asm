@@ -26,6 +26,7 @@
 
             section   .text
 _start:
+            call      generate_sudoku
             call      init_term
             call      draw_grid
             mov       rax, sys_read           ; system call for read
@@ -84,6 +85,7 @@ draw_grid:
             mov       r8, 0                   ; number of rows draw so far
 draw_loop:
             call      draw_row_split          ; draw decorative row split
+            mov       rdi, r8
             call      draw_row_content        ; draw content for row
             inc       r8                      ; row finished, increase counter
             cmp       r8, num_rows            ; compare for row limit
@@ -104,16 +106,31 @@ draw_row_split:
 ; ==== END DRAW ROW CONTENT FUNCTION ====
 
 ; ==== DRAW ROW CONTENT FUNCTION ====
+; param rdi: the row to draw
 ; function to draw all columns of a row in the sudoku grid.   
 draw_row_content:
             mov       r9, 0                   ; number of columns drawn so far
+            mov       r10, rdi                ; store the row in r10
             mov       rdx, write              ; put start of write buffer into rdx
 content_loop:
             mov       byte [rdx], '|'         ; decorative character
             inc       rdx                     ; next byte
             mov       byte [rdx], ' '         ; spacing
             inc       rdx                     ; next byte
-            mov       byte [rdx], '0'         ; the ascii grid value
+
+            push      rdx                     ; save rdx to the stack
+            mov       rdi, r10                ; row param
+            mov       rsi, r9                 ; column param
+            mov       rdx, 9                  ; num columns param
+            call      coord_to_index          ; get sudoku buffer offset for row column
+            pop       rdx                     ; restore rdx from stack
+
+            mov       r11, sudoku             ; move address of sudoku buffer into r11
+            add       r11, rax                ; apply offset
+            mov       dil, byte [r11]         ; move current buffer byte into dil
+            call      dec_to_ascii            ; convert decimal to ascii
+
+            mov       byte [rdx], al          ; the ascii grid value
             inc       rdx                     ; next byte
             mov       byte [rdx], ' '         ; spacing
             inc       rdx                     ; next byte
@@ -130,6 +147,45 @@ content_loop:
             syscall                           ; invoke OS to write
             ret                               ; end function
 ; ==== END DRAW ROW CONTENT FUNCTION ====
+
+; ==== DECIMAL TO ASCII FUNCTION ====
+; function to convert a decimal number to its ascii code.
+; param dil: byte containing decimal number from 0-9 inclusive
+; return al: ascii code for input value 
+dec_to_ascii:
+            ; TODO: range checking and errors.
+            mov       al, dil                ; move the input into al
+            add       al, 48                 ; add an offset of 48
+            ret
+; ==== END DECIMAL TO ASCII FUNCTION ====
+
+; ==== COORDINATE TO INDEX FUNCTION ====
+; param rdi: the row
+; param rsi: the column
+; param rdx: the number of columns
+coord_to_index:
+            mov rax, rdi
+            imul rax, rdx
+            add rax, rsi
+            ret
+; ==== END COORDINATE TO INDEX FUNCTION ====
+
+; ==== GENERATE SUDOKU FUNCTION ====
+; stub implementation for sudoku generation that sets each byte to its
+; index
+generate_sudoku:
+            mov       r8, 0
+            mov       r9, sudoku
+            mov       r10b, 0
+write_loop:
+            mov       byte [r9], r10b
+            inc       r10b
+            inc       r9
+            inc       r8
+            cmp       r8, 81
+            jl        write_loop
+            ret
+; ==== END GENERATE SUDOKU FUNCTION ====
 
             section   .bss
 input:      resb      1                       ; buffer used to read input
