@@ -28,16 +28,14 @@
 _start:
             call      generate_sudoku
             call      init_term
+game_loop:
             call      draw_grid
-            mov       rax, sys_read           ; system call for read
-            mov       rdi, fd_stdin           ; file handle 0 is stdin
-            mov       rsi, input              ; address of buffer
-            mov       rdx, 1                  ; number of bytes to read
-            syscall                           ; invoke OS to do the read
-            movzx     rdi, byte [input]       ; the byte that was read
-            cmp       rdi, keycode_Q          ; compare entered key with quit symbol
+
+            mov       rdi, input              ; buffer address for get_key
+            call      get_key
+            cmp       rax, keycode_Q          ; compare entered key with quit symbol
             je        exit                    ; exit
-            jmp       _start                  ; continue loop
+            jmp       game_loop               ; continue loop
 
 exit:
             call      reset_term
@@ -78,6 +76,25 @@ reset_term:
             mov       rdx, termios            ; termios stucture to write
             syscall                           ; invoke the OS to write termios
             ret
+
+; ==== GET KEY FUNCTION ====
+; function to read a single key from the standard input
+; input rdi: address of single byte buffer in which to store the read character
+; output rax: the charater that was read. '0' if no character was read
+; modifies: rax, rdx, rsi, rdi
+get_key:
+            mov       rsi, rdi                ; address of read buffer
+            mov       rax, sys_read           ; system call for read
+            mov       rdi, fd_stdin           ; file handle 0 is stdin
+            mov       rdx, 1                  ; number of bytes to read
+            syscall                           ; invoke OS to do the read
+            dec       rax                     ; dec read count, if was 1 then 0 flag gets set
+            jz        .return
+            mov       byte [rsi], '0'
+.return:
+            mov       al, [rsi]               ; move read character to output
+            ret
+; ==== END GET KEY FUNCTION ====
 
 ; ==== DRAW GRID FUNCTION ====
 ; function to draw the sudoku grid to stdout
