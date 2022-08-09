@@ -22,6 +22,8 @@
 %define     num_rows  9                       ; number of rows in the sudoku grid
 %define     num_cols  9                       ; number of columns in the sudoku grid
 
+%define     escape    0x1b                    ; ascii escape character
+
             global    _start
 
             section   .text
@@ -29,6 +31,7 @@ _start:
             call      generate_sudoku
             call      init_term
 game_loop:
+            call      clear                   ; clear the terminal
             call      draw_grid
 
             mov       rdi, input              ; buffer address for get_key
@@ -76,6 +79,19 @@ reset_term:
             mov       rdx, termios            ; termios stucture to write
             syscall                           ; invoke the OS to write termios
             ret
+
+; ==== CLEAR FUNCTION ====
+; function to clear the terminal by writing the cls buffer to the standard
+; output
+; modifies: rax, rdx, rsi, rdi
+clear:
+            mov       rax, sys_write          ; code for write syscall
+            mov       rdi, fd_stdout          ; write to stdout (terminal)
+            mov       rsi, cls                ; write the cls buffer
+            mov       rdx, cls_ln             ; buffer length
+            syscall                           ; invoke OS to write
+            ret
+; ==== END CLEAR FUNCTION ====
 
 ; ==== GET KEY FUNCTION ====
 ; function to read a single key from the standard input
@@ -212,9 +228,11 @@ termios:
 c_iflag     resd      1                       ; input mode flags
 c_oflag     resd      1                       ; output mode flags
 c_cflag     resd      1                       ; control mode flags
-c_lflag     resd      1                       ; local mode flags
+c_lflag     resd      1                       ; local mode flags    
 c_line      resb      1                       ; line discipline
 c_cc        resb      19                      ; control characters
 
             section   .data
 row_split:  db        "+---+---+---+---+---+---+---+---+---+", 10
+cls:        db        escape, "[H", escape, "[2J"
+cls_ln:     equ       $-cls
