@@ -133,7 +133,7 @@ drawRowSplit:
             mov       rax, sysWrite           ; code for write syscall
             mov       rdi, fdStdout           ; write to stdout (terminal)
             mov       rsi, rowSplit           ; buffer to write out
-            mov       rdx, rowChars           ; number of bytes to write
+            mov       rdx, rowSplitLn         ; number of bytes to write
             syscall                           ; invoke OS to write
             ret                               ; end function
 ; ==== END DRAW ROW CONTENT FUNCTION ====
@@ -234,5 +234,6 @@ cc:         resb      19                      ; control characters
 
             section   .data
 rowSplit:   db        "+---+---+---+---+---+---+---+---+---+", 10
+rowSplitLn: equ       $-rowSplit
 cls:        db        escape, "[H", escape, "[2J"
 clsLn:      equ       $-cls
