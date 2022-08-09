@@ -116,13 +116,13 @@ getKey:
 ; function to draw the sudoku grid to stdout
 drawGrid:
             mov       r8, 0                           ; number of rows draw so far
-drawLoop:
+.drawLoop:
             call      drawRowSplit                    ; draw decorative row split
             mov       rdi, r8
             call      drawRowContent                  ; draw content for row
             inc       r8                              ; row finished, increase counter
             cmp       r8, numRows                     ; compare for row limit
-            jl        drawLoop                        ; loop if not at limit
+            jl        .drawLoop                        ; loop if not at limit
             call      drawRowSplit                    ; closing decorative row split
             ret                                       ; end function
 ; ==== END DRAW GRID FUNCTION ====
@@ -141,11 +141,11 @@ drawRowSplit:
 ; ==== DRAW ROW CONTENT FUNCTION ====
 ; param rdi: the row to draw
 ; function to draw all columns of a row in the sudoku grid.   
-drawRowContent :
+drawRowContent:
             mov       r9, 0                           ; number of columns drawn so far
             mov       r10, rdi                        ; store the row in r10
             mov       rdx, write                      ; put start of write buffer into rdx
-contentLoop:
+.contentLoop:
             mov       byte [rdx], '|'                 ; decorative character
             inc       rdx                             ; next byte
             mov       byte [rdx], ' '                 ; spacing
@@ -169,7 +169,7 @@ contentLoop:
             inc       rdx                             ; next byte
             inc       r9                              ; row finished, increase counter
             cmp       r9, numCols                     ; compare for column limit
-            jl        contentLoop                     ; loop if not at limit
+            jl        .contentLoop                     ; loop if not at limit
             mov       byte [rdx], '|'                 ; closing decorative character
             inc       rdx                             ; next byte
             mov       byte [rdx], 10                  ; new line
@@ -210,13 +210,13 @@ generateSudoku:
             mov       r8, 0
             mov       r9, sudoku
             mov       r10b, 0
-writeLoop:
+.writeLoop:
             mov       byte [r9], r10b
             inc       r10b
             inc       r9
             inc       r8
             cmp       r8, 81
-            jl        writeLoop
+            jl        .writeLoop
             ret
 ; ==== END GENERATE SUDOKU FUNCTION ====
 
