@@ -32,19 +32,58 @@ _start:
             call      initTerm
 gameLoop:
             call      clear                           ; clear the terminal
-            call      drawGrid
+            call      drawGrid                        ; redraw the grid
+.inputLoop:
+            call      fillInput
+            cmp       byte [input], escape
+            jne       .inputChar                      ; not escape sequence so handle regular input
+            cmp       byte [input + 1], '['
+            jne       gameLoop                        ; we only care about '[' for arrow keys
+            cmp       byte [input + 2], 'A'
+            je        .upArr
+            cmp       byte [input + 2], 'B'
+            je        .downArr
+            cmp       byte [input + 2], 'C'
+            je        .rightArr
+            cmp       byte [input + 2], 'D'
+            je        .leftArr
+            jmp       gameLoop                        ; something unexpected, ignore it
+.leftArr:
+            mov       rsi, leftMsg
+            mov       rdi, leftMsgLn
+            call      print
+            jmp       gameLoop
+.rightArr:
+            mov       rsi, rightMsg
+            mov       rdi, rightMsgLn
+            call      print
+            jmp       gameLoop
+.upArr:
+            mov       rsi, upMsg
+            mov       rdi, upMsgLn
+            call      print
+            jmp       gameLoop
+.downArr:
+            mov       rsi, downMsg
+            mov       rdi, downMsgLn
+            call      print
+            jmp       gameLoop
+.inputChar:
+            cmp       byte [input], keyQ
+            je        exit
+            jmp       gameLoop
 
-            mov       rdi, input                      ; buffer address for getKey 
-            call      getKey
-            cmp       rax, keyQ                       ; compare entered key with quit symbol
-            je        exit                            ; exit
-            jmp       gameLoop                        ; continue loop
-
+; ==== EXIT FUNCTION ====
+; function to exit the program
+; input rdi: exit code
+; modifies: rax
 exit:
+            push      rdi
             call      resetTerm
-            mov       rdi, 0                          ; store read exit code
+            pop       rdi
             mov       rax, sysExit                    ; system call for exit
             syscall                                   ; invoke operating system to exit
+; ==== END EXIT FUNCTION ====
 
 initTerm:
             mov       rax, sysIoctl                   ; system call for ioctl
@@ -93,24 +132,16 @@ clear:
             ret
 ; ==== END CLEAR FUNCTION ====
 
-; ==== GET KEY FUNCTION ====
-; function to read a single key from the standard input
-; input rdi: address of single byte buffer in which to store the read character
-; output rax: the charater that was read. '0' if no character was read
-; modifies: rax, rdx, rsi, rdi
-getKey:
-            mov       rsi, rdi                        ; address of read buffer
-            mov       rax, sysRead                    ; system call for read
-            mov       rdi, fdStdin                    ; file handle 0 is stdin
-            mov       rdx, 1                          ; number of bytes to read
-            syscall                                   ; invoke OS to do the read
-            dec       rax                             ; dec read count, if was 1 then 0 flag gets set
-            jz        .return
-            mov       byte [rsi], '0'
-.return:
-            mov       al, [rsi]                       ; move read character to output
+; ==== FILL INPUT FUNCTION ====
+; function to fill the input buffer by reading from stdin.
+fillInput:
+            mov       rsi, input
+            mov       rax, sysRead
+            mov       rdi, fdStdin
+            mov       rdx, 4
+            syscall
             ret
-; ==== END GET KEY FUNCTION ====
+; ==== END FILL INPUT FUNCTION ====
 
 ; ==== DRAW GRID FUNCTION ====
 ; function to draw the sudoku grid to stdout
@@ -122,7 +153,7 @@ drawGrid:
             call      drawRowContent                  ; draw content for row
             inc       r8                              ; row finished, increase counter
             cmp       r8, numRows                     ; compare for row limit
-            jl        .drawLoop                        ; loop if not at limit
+            jl        .drawLoop                       ; loop if not at limit
             call      drawRowSplit                    ; closing decorative row split
             ret                                       ; end function
 ; ==== END DRAW GRID FUNCTION ====
@@ -220,8 +251,21 @@ generateSudoku:
             ret
 ; ==== END GENERATE SUDOKU FUNCTION ====
 
+; ==== PRINT FUNCTION ====
+; function to write a buffer to the standard output
+; input rsi: buffer to print
+; input rdi: length of buffer to print
+; modifies: rdx, rax, rdi
+print:
+            mov       rdx, rdi                        ; length of buffer
+            mov       rax, sysWrite                   ; code for write syscall
+            mov       rdi, fdStdout                   ; write to stdout (terminal)
+            syscall                                   ; invoke OS to write
+            ret
+; ==== END PRINT FUNCTION ====
+
             section   .bss
-input:      resb      1                               ; buffer used to read input
+input:      resb      4                               ; buffer used to read input
 sudoku:     resb      81
 write:      resb      38
 termios:
@@ -237,3 +281,12 @@ rowSplit:   db        "+---+---+---+---+---+---+---+---+---+", 10
 rowSplitLn: equ       $-rowSplit
 cls:        db        escape, "[H", escape, "[2J"
 clsLn:      equ       $-cls
+
+leftMsg     db        "left arrow key", 10
+leftMsgLn   equ       $-leftMsg
+rightMsg    db        "right arrow key", 10
+rightMsgLn  equ       $-rightMsg
+upMsg       db        "up arrow key", 10
+upMsgLn     equ       $-upMsg
+downMsg     db        "down arrow key", 10
+downMsgLn   equ       $-downMsg
