@@ -266,8 +266,8 @@ print:
 
             section   .bss
 input:      resb      4                               ; buffer used to read input
-sudoku:     resb      81
-write:      resb      38
+sudoku:     resb      81                              ; sudoku values
+write:      resb      38                              ; write buffer, there are 38 characters per grid row inc. decorations
 termios:
 .iflag:     resd      1                               ; input mode flags
 .oflag:     resd      1                               ; output mode flags
