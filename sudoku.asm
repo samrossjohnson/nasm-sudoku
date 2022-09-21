@@ -49,24 +49,16 @@ gameLoop:
             je        .leftArr
             jmp       gameLoop                        ; something unexpected, ignore it
 .leftArr:
-            mov       rsi, leftMsg
-            mov       rdi, leftMsgLn
-            call      print
+            sub       byte [caret], 1
             jmp       gameLoop
 .rightArr:
-            mov       rsi, rightMsg
-            mov       rdi, rightMsgLn
-            call      print
+            add       byte [caret], 1
             jmp       gameLoop
 .upArr:
-            mov       rsi, upMsg
-            mov       rdi, upMsgLn
-            call      print
+            sub       byte [caret], 9
             jmp       gameLoop
 .downArr:
-            mov       rsi, downMsg
-            mov       rdi, downMsgLn
-            call      print
+            add       byte [caret], 9
             jmp       gameLoop
 .inputChar:
             cmp       byte [input], keyQ
@@ -176,7 +168,7 @@ drawRowContent:
             mov       r9, 0                           ; number of columns drawn so far
             mov       r10, rdi                        ; store the row in r10
             mov       rdx, write                      ; put start of write buffer into rdx
-.contentLoop:
+.cellsLoop:
             mov       byte [rdx], '|'                 ; decorative character
             inc       rdx                             ; next byte
             mov       byte [rdx], ' '                 ; spacing
@@ -189,18 +181,25 @@ drawRowContent:
             call      coordToIndex                    ; get sudoku buffer offset for row column
             pop       rdx                             ; restore rdx from stack
 
+            cmp       al, [caret]                     ; check if the cell to draw is the caret
+            jne       .drawCellValue                  ; if not, draw as normal
+            mov       byte [rdx], ' '                 ; draw the caret char
+            jmp       .drawCellClose                  ; finish the cell (skipping the regular value)
+
+.drawCellValue
             mov       r11, sudoku                     ; move address of sudoku buffer into r11
             add       r11, rax                        ; apply offset
             mov       dil, byte [r11]                 ; move current buffer byte into dil
             call      decToAscii                      ; convert decimal to ascii
-
             mov       byte [rdx], al                  ; the ascii grid value
+
+.drawCellClose
             inc       rdx                             ; next byte
             mov       byte [rdx], ' '                 ; spacing
             inc       rdx                             ; next byte
             inc       r9                              ; row finished, increase counter
             cmp       r9, numCols                     ; compare for column limit
-            jl        .contentLoop                     ; loop if not at limit
+            jl        .cellsLoop                      ; loop if not at limit
             mov       byte [rdx], '|'                 ; closing decorative character
             inc       rdx                             ; next byte
             mov       byte [rdx], 10                  ; new line
@@ -224,13 +223,13 @@ decToAscii:
 ; ==== END DECIMAL TO ASCII FUNCTION ====
 
 ; ==== COORDINATE TO INDEX FUNCTION ====
-; param rdi: the row
-; param rsi: the column
-; param rdx: the number of columns
+; param dil: the row
+; param sil: the column
+; param dl: the number of columns
 coordToIndex:
-            mov       rax, rdi
-            imul      rax, rdx
-            add       rax, rsi
+            mov       al, dil
+            mul       dl
+            add       al, sil
             ret
 ; ==== END COORDINATE TO INDEX FUNCTION ====
 
@@ -268,6 +267,7 @@ print:
 input:      resb      4                               ; buffer used to read input
 sudoku:     resb      81                              ; sudoku values
 write:      resb      38                              ; write buffer, there are 38 characters per grid row inc. decorations
+caret:      resb      1                               ; players location in the sudoku grid
 termios:
 .iflag:     resd      1                               ; input mode flags
 .oflag:     resd      1                               ; output mode flags
@@ -281,12 +281,3 @@ rowSplit:   db        "+---+---+---+---+---+---+---+---+---+", 10
 rowSplitLn: equ       $-rowSplit
 cls:        db        escape, "[H", escape, "[2J"
 clsLn:      equ       $-cls
-
-leftMsg     db        "left arrow key", 10
-leftMsgLn   equ       $-leftMsg
-rightMsg    db        "right arrow key", 10
-rightMsgLn  equ       $-rightMsg
-upMsg       db        "up arrow key", 10
-upMsgLn     equ       $-upMsg
-downMsg     db        "down arrow key", 10
-downMsgLn   equ       $-downMsg
