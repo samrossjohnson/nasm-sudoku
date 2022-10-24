@@ -3,8 +3,12 @@
 ;
 ;     nasm -felf64 sudoku.asm && ld sudoku.o && ./a.out
 ; ----------------------------------------------------------------------------------------
+%define     key0      48
+%define     key1      49
+%define     key9      57
 %define     keyQ      81
 
+%define     sudokuLn  81
 %define     sysRead   0
 %define     sysWrite  1
 %define     sysIoctl  16
@@ -63,6 +67,15 @@ gameLoop:
 .inputChar:
             cmp       byte [input], keyQ
             je        exit
+            mov       dil, byte [input]
+            sub       dil, key1                       ; we are able to convert if (x>=0 && x<=b) into ...
+            cmp       dil, 8                          ; ... if (x-a <= b-a) so we only need a single comparison ...
+            jna       .inputCellValue                 ; ... by exploiting jna unsigned characteristic
+            jmp       gameLoop
+.inputCellValue:
+            mov       dil, byte [input]
+            sub       dil, key0                       ; conversion from ['0'...'9'] -> [0...9]
+            call      writeToGrid
             jmp       gameLoop
 
 ; ==== EXIT FUNCTION ====
@@ -233,6 +246,34 @@ coordToIndex:
             ret
 ; ==== END COORDINATE TO INDEX FUNCTION ====
 
+; ==== WRITE TO GRID FUNCTION ====
+; function to write a number [1, 9] inclusive to the sudoku buffer.
+; param dil: byte representing integer value [1, 9] inclusive
+; ret 0: value successfully written to sudoku buffer
+; ret 1: failed to write as value was not [1, 9] inclusive
+; ret 2: failed to write as caret was outside of sudoku buffer bounds
+writeToGrid:
+            cmp       dil, 0                          ; check value is >= 0
+            jl        .invalidValue
+            cmp       dil, 9                          ; check value is <= 9
+            jg        .invalidValue
+            cmp       byte [caret], 0                 ; check sudoku buffer index is > 0
+            jl        .outOfBounds
+            cmp       byte [caret], sudokuLn          ; check sudoku buffer index is < sudokuLn - 1
+            jge       .outOfBounds
+            movzx     rsi, byte [caret]               ; the write location is the caret offset ...
+            add       rsi, sudoku                     ; ... on top of the sudoku start address
+            mov       byte [rsi], dil                 ; write the value to the sudoku grid
+            mov       rax, 0                          ; return success code
+            ret
+.invalidValue
+            mov       rax, 1
+            ret
+.outOfBounds
+            mov       rax, 2
+            ret
+; ==== END WRITE TO GRID FUNCTION ====
+
 ; ==== GENERATE SUDOKU FUNCTION ====
 ; stub implementation for sudoku generation that sets each byte to its
 ; index
@@ -265,7 +306,7 @@ print:
 
             section   .bss
 input:      resb      4                               ; buffer used to read input
-sudoku:     resb      81                              ; sudoku values
+sudoku:     resb      sudokuLn                        ; sudoku values
 write:      resb      38                              ; write buffer, there are 38 characters per grid row inc. decorations
 caret:      resb      1                               ; players location in the sudoku grid
 termios:
